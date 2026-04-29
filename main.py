@@ -481,10 +481,10 @@ TRIGGER_KEYWORDS = [
 
 @register(
     "astrbot_plugin_food_recommend",
-    "杨雨健",
+    "windfall",
     "向机器人发送特定消息即可获得随机美食推荐及详细做法，支持按餐类筛选和菜谱查询。",
     "1.0.0",
-    "https://github.com/example/astrbot_plugin_food_recommend",
+    "https://github.com/newboygo/astrbot_plugin_food_recommend",
 )
 class FoodRecommendPlugin(Star):
     def __init__(self, context: Context):
