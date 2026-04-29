@@ -1,0 +1,12 @@
+name: astrbot_plugin_food_recommend
+display_name: "美食推荐"
+version: "1.0.0"
+author: "杨雨健"
+description: "向机器人发送特定消息即可获得随机美食推荐及详细做法，支持按餐类（早餐/午餐/晚餐/夜宵）筛选和菜谱查询。"
+repo: "https://github.com/example/astrbot_plugin_food_recommend"
+astrbot_version: ">=4.17.0,<6"
+support_platforms:
+  - aiocqhttp
+  - telegram
+  - wecom
+  - qqofficial
