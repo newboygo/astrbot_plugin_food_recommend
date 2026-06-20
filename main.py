@@ -1,6 +1,6 @@
 import random
 from astrbot.api.event import filter, AstrMessageEvent
-from astrbot.api.star import Context, Star, register
+from astrbot.api.star import Context, Star
 from astrbot.api import logger
 
 # ============================================================
@@ -155,7 +155,7 @@ FOOD_DB = [
         "category": "午餐",
         "difficulty": "⭐⭐ 中等",
         "time": "20分钟",
-        "desc": "虽名"鱼香"实无鱼，酸甜咸辣兼备，下饭神器。",
+        "desc": "虽名鱼香实无鱼，酸甜咸辣兼备，下饭神器。",
         "ingredients": "猪里脊 250g、木耳、胡萝卜、青椒、泡椒、姜蒜末、葱、生抽、醋、糖、淀粉、郫县豆瓣酱",
         "steps": [
             "里脊切丝加料酒、淀粉、少许盐腌制10分钟；木耳、胡萝卜、青椒切丝。",
@@ -479,13 +479,6 @@ TRIGGER_KEYWORDS = [
 ]
 
 
-@register(
-    "astrbot_plugin_food_recommend",
-    "windfall",
-    "向机器人发送特定消息即可获得随机美食推荐及详细做法，支持按餐类筛选和菜谱查询。",
-    "1.0.0",
-    "https://github.com/newboygo/astrbot_plugin_food_recommend",
-)
 class FoodRecommendPlugin(Star):
     def __init__(self, context: Context):
         super().__init__(context)
@@ -505,11 +498,13 @@ class FoodRecommendPlugin(Star):
 
         if not foods:
             yield event.plain_result("没有找到该餐类的食物，试试「/吃什么」获取随机推荐吧~")
+            event.stop_event()
             return
 
         picked = random.choice(foods)
         result = self._format_food_card(picked, category_label)
         yield event.plain_result(result)
+        event.stop_event()
 
     # ========== 指令：怎么做 ==========
     @filter.command("怎么做", alias={"howto", "食谱", "做法", "recipe"})
@@ -521,23 +516,32 @@ class FoodRecommendPlugin(Star):
                 "请告诉我你想要查询的菜名哦~ 例如：\n/怎么做 宫保鸡丁\n\n"
                 "发送 /吃什么 可以随机推荐美食！"
             )
+            event.stop_event()
             return
 
+        # 精确匹配优先，模糊匹配兜底，降低误匹配
         matched = None
         for food in FOOD_DB:
-            if dish_name in food["name"] or food["name"] in dish_name:
+            if dish_name == food["name"]:
                 matched = food
                 break
+        if not matched:
+            for food in FOOD_DB:
+                if dish_name in food["name"] or food["name"] in dish_name:
+                    matched = food
+                    break
 
         if not matched:
             yield event.plain_result(
                 f"抱歉，还没有收录「{dish_name}」的做法~ 😅\n"
                 "发送 /吃什么 获取随机推荐吧！"
             )
+            event.stop_event()
             return
 
-        result = self._format_food_card(matched, detailed=True)
+        result = self._format_food_card(matched)
         yield event.plain_result(result)
+        event.stop_event()
 
     # ========== 指令：菜单 ==========
     @filter.command("菜单", alias={"menu", "全部菜谱", "美食列表"})
@@ -561,15 +565,19 @@ class FoodRecommendPlugin(Star):
         lines.append("发送 /怎么做 <菜名> 查看做法")
 
         yield event.plain_result("\n\n".join(lines))
+        event.stop_event()
 
     # ========== 自然语言触发：关键词匹配 ==========
     @filter.event_message_type(filter.EventMessageType.ALL)
     async def on_message(self, event: AstrMessageEvent):
         """监听包含关键词的自然语言消息"""
-        msg = event.get_message_str()
+        # 被唤醒词/命令触发的消息交给指令处理器，避免重复响应。
+        # 注意：唤醒前缀会被框架消费，不能用 msg.startswith("/") 判断。
+        if event.is_at_or_wake_command:
+            return
 
-        # 跳过命令消息，避免与上方指令重复响应
-        if msg.startswith("/"):
+        msg = event.get_message_str()
+        if not msg:
             return
 
         if any(kw in msg for kw in TRIGGER_KEYWORDS):
@@ -577,22 +585,25 @@ class FoodRecommendPlugin(Star):
             for cat in ("早餐", "午餐", "晚餐", "夜宵"):
                 if cat in msg:
                     foods = [f for f in FOOD_DB if f["category"] == cat]
+                    if not foods:
+                        continue
                     picked = random.choice(foods)
                     result = self._format_food_card(picked, cat)
                     yield event.plain_result(result)
+                    event.stop_event()
                     return
 
             # 随机推荐
             picked = random.choice(FOOD_DB)
             result = self._format_food_card(picked, "随机")
             yield event.plain_result(result)
+            event.stop_event()
 
     # ========== 格式化输出 ==========
-    def _format_food_card(self, food: dict, category_label: str = "", detailed: bool = False) -> str:
+    def _format_food_card(self, food: dict, category_label: str = "") -> str:
         """将食物信息格式化为美观的文本卡片"""
         emoji_map = {"早餐": "🌅", "午餐": "☀️", "晚餐": "🌙", "夜宵": "🌃", "随机": "🎲"}
         emoji = emoji_map.get(food["category"], "🍽️")
-        label_emoji = emoji_map.get(category_label, "🍽️")
 
         lines = [
             f"{emoji} {food['name']}",
