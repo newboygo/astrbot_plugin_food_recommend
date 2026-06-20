@@ -16,7 +16,7 @@
 
 ## 数据来源
 
-收录 **362 道中式菜品**，数据源自开源项目 [Anduin2017/HowToCook](https://github.com/Anduin2017/HowToCook)（程序员做饭指南，采用 The Unlicense / 公共领域授权），经清洗整理为 `food_data.json`。
+收录 **362 道中式菜品**，数据源自开源项目 [Anduin2017/HowToCook](https://github.com/Anduin2017/HowToCook)
 
 分类分布：
 
